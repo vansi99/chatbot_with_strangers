@@ -1,5 +1,5 @@
 const request = require('request');
-const PAGE_ACCESS_TOKEN = "EAAEIF6fxc3YBACn9PLCclx1MLMwNaNdjSzsZA2N7LfDLIyOoZBHZB8ZBchlFJG5tzZB8kxyvylgcrNEvvMRLHOb88xeHXJbbyOZCINPpeIZBASKXLZCW6h5ldSvILdtZBZAMFoVRKZAHtWGazMBBiZB0q9ZBT373l4Vvm4RqTZBrwAPdL6JDVRdptK0ECZB";
+const PAGE_ACCESS_TOKEN = "";
 
 const callMessageAPI = (sender_psid, response) => {
     let request_body = {
