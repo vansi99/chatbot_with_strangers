@@ -8,12 +8,18 @@ const sequelize = require('sequelize');
 const Op = sequelize.Op;
 
 const getPartnerPsid = async (sender_id) => {
-    const partner = await partners_users.findOne({
-        where: {
-            user_id: sender_id
-        }
-    });
-    return partner.partner_psid;
+    try {
+        const partner = await partners_users.findOne({
+            where: {
+                user_id: sender_id
+            }
+        });
+        return partner.partner_psid;
+    } catch (e) {
+        console.log(e.message);
+    }
+
+
 };
 
 function deleteMatch(sender_id, sender_psid) {
@@ -42,17 +48,17 @@ async function updateMatchedUsers(sender_psid, partner_psid, match) {
 
 const checkSenderId = async (sender_psid) => {
     try {
-        const user = await users.findOne({
+        let user = await users.findOne({
             where: {
                 psid: sender_psid
             }
         });
 
         if (!user) {
-            await users.create({
-                psid: Number(sender_psid),
+            user = await users.create({
+                psid: Number(sender_psid)
             });
-            return user.matched = 0;
+            return user;
         }
 
         return user;
@@ -80,17 +86,20 @@ const matchUsers = async (sender_psid) => {
     const sizeUser = usersNotMatch.length;
     const randUser = Math.floor((Math.random() * sizeUser) + 1);
     const partner = usersNotMatch[randUser - 1];
-    await partners_users.create({
-        user_id: sender.id,
-        partner_psid: partner.psid
-    });
+    try {
+        await partners_users.create({
+            user_id: sender.id,
+            partner_psid: partner.psid
+        });
+        await partners_users.create({
+            user_id: partner.id,
+            partner_psid: sender.psid
+        });
+        await updateMatchedUsers(sender.psid, partner.psid, 1);
+    } catch (e) {
+        console.log(e.message);
+    }
 
-    await partners_users.create({
-        user_id: partner.id,
-        partner_psid: sender.psid
-    });
-
-    await updateMatchedUsers(sender.psid, partner.psid, 1);
 
 };
 
@@ -136,11 +145,10 @@ router.post('/', (req, res) => {
             // Get the sender PSID
             let sender_psid = webhook_event.sender.id;
             if (webhook_event.postback) {
-                send.handlePostback(sender_psid, webhook_event.postback);
+                await send.handlePostback(sender_psid, webhook_event.postback);
             }
             console.log('Sender PSID: ' + sender_psid);
             const user = await checkSenderId(sender_psid);
-
             if (user.matched === 1 && webhook_event.message) {
                 let partner_psid = await getPartnerPsid(user.id);
                 let checkPartner = checkPartner_psid(partner_psid);
@@ -148,20 +156,21 @@ router.post('/', (req, res) => {
 
                 if (checkPartner) {
                     if (message === "pp") {
-                        await send.handleChatMessage(partner_psid,message);
+                        await send.handleChatMessage(partner_psid, message);
                         await ppPartner(user.id, user.psid);
                         await updateMatchedUsers(sender_psid, partner_psid, 0);
                         await send.handlePPmessage(sender_psid, partner_psid);
                         await send.handleFindPartnerMessage(sender_psid, partner_psid);
-                    } else{
-                        await send.handleChatMessage(partner_psid,message);
+                    } else {
+                        await send.handleChatMessage(partner_psid, message);
                     }
                 }
 
-            } else if (user.matched === 0) {
+            } else if (user.matched === 0 &&webhook_event.message) {
                 await matchUsers(sender_psid);
                 const partner_psid = await getPartnerPsid(user.id);
-                send.handleFindSuccess(sender_psid, partner_psid);
+                await send.handleFindSuccess(sender_psid, partner_psid);
+
             }
         });
 

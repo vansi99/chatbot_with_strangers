@@ -28,10 +28,7 @@ async function handlePostback(sender_psid, received_postback){
     console.log(payload);
     if(payload.type === 'GET_STARTED'){
         console.log('ok');
-        await users.create({
-            psid: Number(sender_psid),
-        });
-        api.callMessageAPI(sender_psid, messages.welcomeMessages());
+        api.callMessageAPI(sender_psid, messages.wellcomeMessages());
     } else {
         console.log("fail");
     }
